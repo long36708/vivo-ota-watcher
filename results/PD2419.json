@@ -1,0 +1,20 @@
+{
+  "model": {
+    "name": "vivo X200 Pro mini",
+    "model_sw_ver": "PD2419",
+    "device_model": "V2419A",
+    "sw_version": "15.1.15.5.W10",
+    "android_ver": "15",
+    "snp": "A0000000000000A",
+    "imei": "",
+    "is_full": "true",
+    "mode": "NORMAL"
+  },
+  "checked_at": "2026-08-06T23:10:33.182920+08:00",
+  "result": {
+    "status": "error",
+    "reason": "nonzero_exit",
+    "code": 1,
+    "stderr": "SLF4J(W): No SLF4J providers were found.\nSLF4J(W): Defaulting to no-operation (NOP) logger implementation\nSLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.\nException in thread \"main\" java.lang.ExceptionInInitializerError\n\tat com.github.unidbg.arm.backend.UnicornBackend.<init>(UnicornBackend.java:22)\n\tat com.github.unidbg.arm.backend.BackendFactory.createBackend(BackendFactory.java:44)\n\tat com.github.unidbg.AbstractEmulator.<init>(AbstractEmulator.java:88)\n\tat com.gi"
+  }
+}
