@@ -41,6 +41,7 @@ MODELS_JSON = os.path.join(ROOT, "models.json")
 
 UNIDBG_REPO = "https://github.com/zhkl0228/unidbg.git"
 # 使用最新稳定 tag；0.9.10-SNAPSHOT 无 tag，V0.9.9 是最近的稳定版，API 兼容 0.9.x
+# 注意：V0.9.9 是 tag 不是 branch，clone 时需用 refs/tags/ 引用
 UNIDBG_TAG = "V0.9.9"
 
 # 同步进 unidbg 源码的目标位置
@@ -81,7 +82,12 @@ def build():
     """clone（或更新）unidbg 源码并 maven 编译。"""
     if not os.path.isdir(UNIDBG_DIR):
         log(f"clone unidbg ({UNIDBG_TAG}) ...")
-        run(["git", "clone", "--depth", "1", "--branch", UNIDBG_TAG, UNIDBG_REPO, UNIDBG_DIR])
+        # V0.9.9 是 tag 而非 branch，需显式 fetch tag 后 checkout
+        run(["git", "clone", "--depth", "1", "--filter", "blob:none",
+             UNIDBG_REPO, UNIDBG_DIR])
+        run(["git", "-C", UNIDBG_DIR, "fetch", "--depth", "1", "origin",
+             f"refs/tags/{UNIDBG_TAG}", "--tags"])
+        run(["git", "-C", UNIDBG_DIR, "checkout", "FETCH_HEAD"])
     else:
         log("unidbg 目录已存在，跳过 clone")
 
