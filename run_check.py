@@ -85,22 +85,99 @@ def detect_platform():
     return hit
 
 
+# libunicorn_java.so 引用但 jar 内 libunicorn.so 未提供的 TCG 符号。
+# 只要缺其一，System.loadLibrary("unicorn_java") 就会报
+# "undefined symbol: helper_div_i32"。
+_TCG_HELPERS = [
+    "helper_div_i32", "helper_div_i64", "helper_divu_i32", "helper_divu_i64",
+    "helper_rem_i32", "helper_rem_i64", "helper_remu_i32", "helper_remu_i64",
+    "helper_mulsh_i64", "helper_muluh_i64",
+    "helper_sar_i64", "helper_shl_i64", "helper_shr_i64",
+]
+
+
+def _elf_dynsyms(path_or_bytes):
+    """解析 ELF64 的 .dynsym，返回 {符号名: st_shndx}。非 ELF 返回 None。"""
+    import struct
+    if isinstance(path_or_bytes, bytes):
+        data = path_or_bytes
+    else:
+        try:
+            with open(path_or_bytes, "rb") as f:
+                data = f.read()
+        except OSError:
+            return None
+    if len(data) < 0x40 or data[:4] != b"\x7fELF" or data[4] != 2:
+        return None
+    try:
+        e_shoff = struct.unpack_from("<Q", data, 0x28)[0]
+        e_shentsize = struct.unpack_from("<H", data, 0x3A)[0]
+        e_shnum = struct.unpack_from("<H", data, 0x3C)[0]
+        secs = []
+        for i in range(e_shnum):
+            f = struct.unpack_from("<IIQQQQIIQQ", data, e_shoff + i * e_shentsize)
+            secs.append(dict(type=f[1], offset=f[4], size=f[5],
+                             link=f[6], entsize=f[9]))
+        out = {}
+        for s in secs:
+            if s["type"] != 11 or not s["entsize"]:   # SHT_DYNSYM
+                continue
+            strtab = secs[s["link"]]
+            for i in range(s["size"] // s["entsize"]):
+                off = s["offset"] + i * s["entsize"]
+                st_name, _i, _o, st_shndx = struct.unpack_from("<IBBH", data, off)
+                b = data[strtab["offset"] + st_name:]
+                nm = b[:b.index(b"\0")].decode(errors="replace")
+                if nm:
+                    out[nm] = st_shndx
+        return out
+    except Exception:
+        return None
+
+
+def find_system_unicorn():
+    """在系统库路径中查找提供 TCG helper 符号的 libunicorn.so。
+
+    仅 Linux 需要：jar 内 natives/linux_64/ 的两个 .so 版本不匹配，
+    libunicorn_java.so 是纯 JNI 薄壳，其引用的 13 个 TCG helper 符号
+    在同目录 libunicorn.so 中并不存在，必须由系统 unicorn 提供。
+    （Windows 的 unicorn_java.dll 为自包含构建，不受影响。）
+    """
+    import glob
+    cands = []
+    for d in ("/usr/lib/x86_64-linux-gnu", "/usr/lib/aarch64-linux-gnu",
+              "/usr/lib64", "/usr/lib", "/usr/local/lib"):
+        cands.extend(glob.glob(os.path.join(d, "libunicorn.so*")))
+
+    for p in cands:
+        syms = _elf_dynsyms(p)
+        if not syms:
+            continue
+        if all(syms.get(h, 0) != 0 for h in _TCG_HELPERS):
+            return p
+    return None
+
+
 def extract_unicorn(work_dir):
-    """从 jar 内抽取 unicorn native 到 work_dir，返回成功抽取的文件数。
+    """准备 unicorn native 到 work_dir，返回成功就绪的文件数。
 
-    背景：unicorn.Unicorn.<clinit> 调用 NativeLoader.loadLibrary("unicorn_java")，
-    其流程是「先 System.loadLibrary，失败再从 jar 抽取」。而抽取路径由
-    scijava MxSysInfo 推导：Linux 下它读 /lib/libc.so.6 符号链接并用正则
-    `.*/libc-(\\d+)\\.(\\d+)\\..*` 解析 glibc 版本，拼成
-    natives/linux-x86_64-cxx*-glibc* 这类目录名——与 jar 内实际的
-    natives/linux_64/ 对不上，且 glibc 2.34+ 已不再用 libc-2.xx.so 命名，
-    正则直接失配。于是抽取失败，回落到 System.loadLibrary 又找不到文件，
-    最终 UnsatisfiedLinkError: no unicorn_java in java.library.path。
+    背景一（找不到文件）：unicorn.Unicorn.<clinit> 调用
+    NativeLoader.loadLibrary("unicorn_java")，流程是「先 System.loadLibrary，
+    失败再从 jar 抽取」。抽取路径由 scijava MxSysInfo 推导：Linux 下它读
+    /lib/libc.so.6 并用正则 `.*/libc-(\\d+)\\.(\\d+)\\..*` 解析 glibc 版本，
+    拼成 natives/linux-x86_64-cxx*-glibc* 这类目录名——与 jar 内实际的
+    natives/linux_64/ 对不上，且 glibc 2.34+ 已不用 libc-2.xx.so 命名，
+    正则直接失配。故两步皆失败 → "no unicorn_java in java.library.path"。
+    对策：自己抽取到 java.library.path，让第一步直接命中。
 
-    对策：绕开 scijava，自己把 natives/<arch>/ 下的两个 native 释放到
-    java.library.path 指向的目录，让第一步 System.loadLibrary 直接命中。
+    背景二（符号缺失）：抽取成功后 Linux 仍报
+    "undefined symbol: helper_div_i32"。经 ELF 分析，jar 内
+    linux_64/libunicorn_java.so 仅 1.8MB 且 NEEDED 只有 librt/libc，
+    是纯 JNI 薄壳，13 个 TCG helper 符号全部未定义；而同目录
+    libunicorn.so 虽有 5236 个符号却恰好不含这批 helper——上游打包的
+    两个 .so 版本不匹配。对策：优先用系统安装的 libunicorn.so 覆盖。
 
-    优先级：libs/ 下手动放置的同名文件 > jar 内嵌。
+    优先级：libs/ 手动放置 > 系统 unicorn(仅Linux) > jar 内嵌。
     """
     import zipfile
 
@@ -108,19 +185,32 @@ def extract_unicorn(work_dir):
     if not arch_key:
         return 0
 
-    extracted = 0
+    is_linux = sys.platform.startswith("linux")
+    sys_unicorn = find_system_unicorn() if is_linux else None
+    if is_linux:
+        if sys_unicorn:
+            log(f"[INFO] 使用系统 unicorn: {sys_unicorn}")
+        else:
+            log("[WARN] 未找到含 TCG helper 的系统 libunicorn.so，"
+                "将回退 jar 内嵌（Linux 下大概率报 undefined symbol）。"
+                "请安装: sudo apt-get install -y libunicorn2")
+
+    ready = 0
     with zipfile.ZipFile(JAR_PATH) as z:
         names = set(z.namelist())
         for fname in fnames:
             dst = os.path.join(work_dir, fname)
-
-            # 1) libs/ 手动覆盖优先
             override = os.path.join(LIBS_DIR, fname)
+
             if os.path.exists(override):
+                # 1) libs/ 手动覆盖优先
                 shutil.copyfile(override, dst)
                 log(f"[INFO] 使用 libs/ 下的 {fname}")
+            elif sys_unicorn and fname == "libunicorn.so":
+                # 2) 系统 unicorn 替换掉版本不匹配的 jar 内嵌版
+                shutil.copyfile(sys_unicorn, dst)
             else:
-                # 2) 从 jar 内抽取
+                # 3) 从 jar 内抽取
                 member = f"natives/{arch_key}/{fname}"
                 if member not in names:
                     avail = sorted(n for n in names
@@ -129,13 +219,30 @@ def extract_unicorn(work_dir):
                     continue
                 with z.open(member) as src, open(dst, "wb") as out:
                     shutil.copyfileobj(src, out)
-                log(f"[INFO] 已抽取 {member}")
 
             if os.name != "nt":
                 os.chmod(dst, 0o755)
-            extracted += 1
+            ready += 1
 
-    return extracted
+    if is_linux:
+        _verify_symbols(work_dir)
+    return ready
+
+
+def _verify_symbols(work_dir):
+    """加载前自检 TCG 符号，把失败原因提前暴露成可读信息。"""
+    bridge = os.path.join(work_dir, "libunicorn_java.so")
+    core = os.path.join(work_dir, "libunicorn.so")
+    bs, cs = _elf_dynsyms(bridge), _elf_dynsyms(core)
+    if not bs or not cs:
+        return
+    need = [h for h in _TCG_HELPERS if bs.get(h, 0) == 0]
+    missing = [h for h in need if cs.get(h, 0) == 0]
+    if missing:
+        log(f"[ERROR] libunicorn.so 缺少 {len(missing)}/{len(need)} 个 TCG 符号，"
+            f"例如 {missing[:3]}。java 侧将报 undefined symbol。")
+    elif need:
+        log(f"[INFO] TCG 符号自检通过（{len(need)} 个由 libunicorn.so 提供）。")
 
 
 def prepare_work_dir(model):
@@ -164,14 +271,23 @@ def prepare_work_dir(model):
 def build_env(work_dir):
     """构造子进程环境变量。
 
-    libunicorn_java.so 通过 DT_NEEDED 依赖 libunicorn.so，而动态链接器
-    **不读** java.library.path，因此必须把 work_dir 加入 LD_LIBRARY_PATH
-    (Linux) / DYLD_LIBRARY_PATH (macOS)；Windows 下 dll 同目录即可找到。
+    把 work_dir 加入 LD_LIBRARY_PATH(Linux) / DYLD_LIBRARY_PATH(macOS)。
+    注意 linux_64/libunicorn_java.so 的 NEEDED 里其实**没有** libunicorn.so，
+    它期望 TCG 符号已在全局符号表中；设置该变量是为了让 libunicorn.so
+    能被解析到，并兼容其他平台确有 DT_NEEDED 依赖的情形。
+    Windows 下 dll 同目录即可找到，无需处理。
     """
     env = os.environ.copy()
     keys = []
     if sys.platform.startswith("linux"):
         keys = ["LD_LIBRARY_PATH"]
+        # libunicorn_java.so 的 TCG 符号需在**全局**符号表中可见，
+        # 而 System.loadLibrary 走 RTLD_LOCAL 不会导出符号。
+        # 用 LD_PRELOAD 让 libunicorn.so 以全局方式先于 JVM 装载。
+        core = os.path.join(work_dir, "libunicorn.so")
+        if os.path.exists(core):
+            env["LD_PRELOAD"] = os.pathsep.join(
+                filter(None, [core, env.get("LD_PRELOAD", "")]))
     elif sys.platform == "darwin":
         keys = ["DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH"]
     for k in keys:

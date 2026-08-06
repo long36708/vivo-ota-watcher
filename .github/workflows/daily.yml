@@ -34,6 +34,18 @@ jobs:
       - name: Install Python deps
         run: pip install -r requirements.txt
 
+      # jar 内 natives/linux_64/libunicorn_java.so 是纯 JNI 薄壳，
+      # 它引用的 13 个 TCG 符号(helper_div_i32 等)在同目录 libunicorn.so 中
+      # 并不存在（上游打包的两个 .so 版本不匹配），因此必须用系统 unicorn 提供。
+      # Windows 侧的 unicorn_java.dll 是自包含构建，所以本地不受影响。
+      - name: Install system unicorn
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libunicorn2 libunicorn-dev || \
+            sudo apt-get install -y libunicorn1 libunicorn-dev
+          echo "--- 已安装的 unicorn 库 ---"
+          ldconfig -p | grep -i unicorn || true
+
       - name: Run OTA check
         id: check
         continue-on-error: true
