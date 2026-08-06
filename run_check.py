@@ -56,79 +56,86 @@ def java_available():
 
 
 def detect_platform():
-    """返回 (arch_key, unicorn_file_name)。
+    """返回 (arch_key, [需要抽取的 native 文件名, ...])。
 
     arch_key 对应 jar 内 natives/<arch_key>/ 目录名。
-    unicorn_file_name 是 UnicornBackend(unicorn1) 通过
-    System.loadLibrary("unicorn") 加载的文件名。
+
+    需要两个文件：
+      - unicorn_java : JNI 桥接层，System.loadLibrary("unicorn_java") 的目标
+      - unicorn      : 核心引擎，被前者动态链接依赖
     """
     import platform
     system = platform.system().lower()   # linux / windows / darwin
     machine = platform.machine().lower()
 
     table = {
-        ("linux", "x86_64"):   ("linux_64",    "libunicorn.so"),
-        ("linux", "amd64"):    ("linux_64",    "libunicorn.so"),
-        ("linux", "aarch64"):  ("linux_arm64", "libunicorn.so"),
-        ("linux", "arm64"):    ("linux_arm64", "libunicorn.so"),
-        ("windows", "amd64"):  ("windows_64",  "unicorn.dll"),
-        ("windows", "x86_64"): ("windows_64",  "unicorn.dll"),
-        ("darwin", "x86_64"):  ("osx_64",      "libunicorn.dylib"),
-        ("darwin", "arm64"):   ("osx_arm64",   "libunicorn.dylib"),
+        ("linux", "x86_64"):   ("linux_64",    ["libunicorn_java.so", "libunicorn.so"]),
+        ("linux", "amd64"):    ("linux_64",    ["libunicorn_java.so", "libunicorn.so"]),
+        ("linux", "aarch64"):  ("linux_arm64", ["libunicorn_java.so", "libunicorn.so"]),
+        ("linux", "arm64"):    ("linux_arm64", ["libunicorn_java.so", "libunicorn.so"]),
+        ("windows", "amd64"):  ("windows_64",  ["unicorn_java.dll", "unicorn.dll"]),
+        ("windows", "x86_64"): ("windows_64",  ["unicorn_java.dll", "unicorn.dll"]),
+        ("darwin", "x86_64"):  ("osx_64",      ["libunicorn_java.dylib", "libunicorn.dylib"]),
+        ("darwin", "arm64"):   ("osx_arm64",   ["libunicorn_java.dylib", "libunicorn.dylib"]),
     }
     hit = table.get((system, machine))
     if hit is None:
         log(f"[WARN] 当前平台 {system}/{machine} 未在支持表中，unicorn native 可能无法加载。")
-        return None, None
+        return None, []
     return hit
 
 
 def extract_unicorn(work_dir):
-    """从 jar 内抽取 unicorn native 到 work_dir。
+    """从 jar 内抽取 unicorn native 到 work_dir，返回成功抽取的文件数。
 
-    背景：unidbg 的 UnicornBackend(unicorn1) 走 System.loadLibrary("unicorn")，
-    **不会**自动从 jar 抽取（只有 Unicorn2Backend 的 libunicorn_java.* 才由
-    scijava NativeLoader 自动抽取）。因此必须手动把
-    natives/<arch>/libunicorn.so 释放到 java.library.path 指向的目录，
-    否则 UnicornBackend.<clinit> 会抛 ExceptionInInitializerError。
+    背景：unicorn.Unicorn.<clinit> 调用 NativeLoader.loadLibrary("unicorn_java")，
+    其流程是「先 System.loadLibrary，失败再从 jar 抽取」。而抽取路径由
+    scijava MxSysInfo 推导：Linux 下它读 /lib/libc.so.6 符号链接并用正则
+    `.*/libc-(\\d+)\\.(\\d+)\\..*` 解析 glibc 版本，拼成
+    natives/linux-x86_64-cxx*-glibc* 这类目录名——与 jar 内实际的
+    natives/linux_64/ 对不上，且 glibc 2.34+ 已不再用 libc-2.xx.so 命名，
+    正则直接失配。于是抽取失败，回落到 System.loadLibrary 又找不到文件，
+    最终 UnsatisfiedLinkError: no unicorn_java in java.library.path。
+
+    对策：绕开 scijava，自己把 natives/<arch>/ 下的两个 native 释放到
+    java.library.path 指向的目录，让第一步 System.loadLibrary 直接命中。
 
     优先级：libs/ 下手动放置的同名文件 > jar 内嵌。
-    返回抽取出的文件路径，失败返回 None。
     """
     import zipfile
 
-    arch_key, fname = detect_platform()
+    arch_key, fnames = detect_platform()
     if not arch_key:
-        return None
+        return 0
 
-    dst = os.path.join(work_dir, fname)
+    extracted = 0
+    with zipfile.ZipFile(JAR_PATH) as z:
+        names = set(z.namelist())
+        for fname in fnames:
+            dst = os.path.join(work_dir, fname)
 
-    # 1) libs/ 手动覆盖优先
-    override = os.path.join(LIBS_DIR, fname)
-    if os.path.exists(override):
-        shutil.copyfile(override, dst)
-        log(f"[INFO] 使用 libs/ 下的 {fname}")
-        return dst
+            # 1) libs/ 手动覆盖优先
+            override = os.path.join(LIBS_DIR, fname)
+            if os.path.exists(override):
+                shutil.copyfile(override, dst)
+                log(f"[INFO] 使用 libs/ 下的 {fname}")
+            else:
+                # 2) 从 jar 内抽取
+                member = f"natives/{arch_key}/{fname}"
+                if member not in names:
+                    avail = sorted(n for n in names
+                                   if n.startswith(f"natives/{arch_key}/"))
+                    log(f"[WARN] jar 内缺少 {member}，该目录现有: {avail}")
+                    continue
+                with z.open(member) as src, open(dst, "wb") as out:
+                    shutil.copyfileobj(src, out)
+                log(f"[INFO] 已抽取 {member}")
 
-    # 2) 从 jar 内抽取
-    member = f"natives/{arch_key}/{fname}"
-    try:
-        with zipfile.ZipFile(JAR_PATH) as z:
-            names = set(z.namelist())
-            if member not in names:
-                log(f"[ERROR] jar 内缺少 {member}，可用: "
-                    + ", ".join(n for n in names if n.startswith("natives/") and "unicorn" in n))
-                return None
-            with z.open(member) as src, open(dst, "wb") as out:
-                shutil.copyfileobj(src, out)
-    except Exception as e:
-        log(f"[ERROR] 抽取 {member} 失败: {e}")
-        return None
+            if os.name != "nt":
+                os.chmod(dst, 0o755)
+            extracted += 1
 
-    if os.name != "nt":
-        os.chmod(dst, 0o755)
-    log(f"[INFO] 已抽取 {member} -> {dst}")
-    return dst
+    return extracted
 
 
 def prepare_work_dir(model):
@@ -148,10 +155,28 @@ def prepare_work_dir(model):
     if os.path.isdir(LIBS_DIR):
         shutil.copytree(LIBS_DIR, dst_libs)
 
-    if extract_unicorn(work_dir) is None:
+    if extract_unicorn(work_dir) == 0:
         log("[WARN] 未能准备 unicorn native，java 侧大概率报 ExceptionInInitializerError。")
 
     return work_dir, jar_copy, work_dir
+
+
+def build_env(work_dir):
+    """构造子进程环境变量。
+
+    libunicorn_java.so 通过 DT_NEEDED 依赖 libunicorn.so，而动态链接器
+    **不读** java.library.path，因此必须把 work_dir 加入 LD_LIBRARY_PATH
+    (Linux) / DYLD_LIBRARY_PATH (macOS)；Windows 下 dll 同目录即可找到。
+    """
+    env = os.environ.copy()
+    keys = []
+    if sys.platform.startswith("linux"):
+        keys = ["LD_LIBRARY_PATH"]
+    elif sys.platform == "darwin":
+        keys = ["DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH"]
+    for k in keys:
+        env[k] = os.pathsep.join(filter(None, [work_dir, env.get(k, "")]))
+    return env
 
 
 def build_java_command(work_dir, jar_copy, model, lib_path):
@@ -251,6 +276,7 @@ def run_single(model):
             capture_output=True,
             text=True,
             timeout=300,
+            env=build_env(work_dir),
         )
     except subprocess.TimeoutExpired:
         log(f"  查询超时: {name}")
@@ -348,18 +374,20 @@ def main():
         sys.exit(1)
 
     # 前置校验 unicorn native，避免每个机型都跑到 java 才失败
-    arch_key, uni_name = detect_platform()
+    arch_key, uni_names = detect_platform()
     if arch_key is None:
         log("当前平台不受支持，无法加载 unicorn native。")
         sys.exit(1)
     import zipfile
     with zipfile.ZipFile(JAR_PATH) as z:
-        if (f"natives/{arch_key}/{uni_name}" not in z.namelist()
-                and not os.path.exists(os.path.join(LIBS_DIR, uni_name))):
-            log(f"jar 内缺少 natives/{arch_key}/{uni_name}，"
-                f"且 libs/ 下也没有该文件。")
-            sys.exit(1)
-    log(f"[INFO] 平台 {arch_key}，unicorn native: {uni_name}")
+        names = set(z.namelist())
+    missing = [n for n in uni_names
+               if f"natives/{arch_key}/{n}" not in names
+               and not os.path.exists(os.path.join(LIBS_DIR, n))]
+    if missing:
+        log(f"jar 内 natives/{arch_key}/ 缺少 {missing}，且 libs/ 下也没有。")
+        sys.exit(1)
+    log(f"[INFO] 平台 {arch_key}，unicorn native: {', '.join(uni_names)}")
 
     models = load_models()
     if args.model:
