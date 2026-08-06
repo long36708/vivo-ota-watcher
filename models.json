@@ -1,0 +1,27 @@
+{
+  "_comment": "默认值参考 VivoOtaTracker.java 的 System.getProperty 默认值。device_model 规律: V<数值>A (如 PD2408 -> V2408A)。sw_version 为该机型当前已装版本，用于查询更高版本。",
+  "models": [
+    {
+      "name": "vivo X200 Pro mini",
+      "model_sw_ver": "PD2419",
+      "device_model": "V2419A",
+      "sw_version": "15.1.15.5.W10",
+      "android_ver": "15",
+      "snp": "A0000000000000A",
+      "imei": "",
+      "is_full": "true",
+      "mode": "NORMAL"
+    },
+    {
+      "name": "vivo X100",
+      "model_sw_ver": "PD2309",
+      "device_model": "V2309A",
+      "sw_version": "15.1.15.5.W10",
+      "android_ver": "15",
+      "snp": "A0000000000000A",
+      "imei": "",
+      "is_full": "true",
+      "mode": "NORMAL"
+    }
+  ]
+}

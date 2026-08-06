@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# 临时工作目录（unidbg 运行期创建）
+vivo_ota_*/
+tmp/
+*.tmp
+
+# 运行期产物
+new_versions.txt
+
+# 系统文件
+.DS_Store
+Thumbs.db
+.idea
