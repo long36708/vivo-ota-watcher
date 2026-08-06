@@ -1,0 +1,20 @@
+{
+  "model": {
+    "name": "vivo X100",
+    "model_sw_ver": "PD2309",
+    "device_model": "V2309A",
+    "sw_version": "15.1.15.5.W10",
+    "android_ver": "15",
+    "snp": "A0000000000000A",
+    "imei": "425907617796004",
+    "is_full": "true",
+    "mode": "NORMAL"
+  },
+  "checked_at": "2026-08-06T23:34:57.788249+08:00",
+  "result": {
+    "status": "error",
+    "reason": "nonzero_exit",
+    "code": 1,
+    "stderr": ">>> 关键错误 <<<\nException in thread \"main\" java.lang.ExceptionInInitializerError\n\tat com.github.unidbg.arm.backend.UnicornBackend.<init>(UnicornBackend.java:22)\nCaused by: java.lang.IllegalStateException: java.io.IOException: Couldn't load library library unicorn_java\n\tat unicorn.Unicorn.<clinit>(Unicorn.java:45)\nCaused by: java.io.IOException: Couldn't load library library unicorn_java\n\tat org.scijava.nativelib.NativeLoader.loadLibrary(NativeLoader.java:141)\nCaused by: java.lang.UnsatisfiedLinkError: /tmp/vivo_ota_ax_szfy3/libunicorn_java.so: /tmp/vivo_ota_ax_szfy3/libunicorn_java.so: undefined symbol: helper_div_i32\n\tat java.lang.ClassLoader$NativeLibrary.load(Native Method)\n>>> 完整 stderr <<<\nException in thread \"main\" java.lang.ExceptionInInitializerError\n\tat com.github.unidbg.arm.backend.UnicornBackend.<init>(UnicornBackend.java:22)\n\tat com.github.unidbg.arm.backend.BackendFactory.createBackend(BackendFactory.java:44)\n\tat com.github.unidbg.AbstractEmulator.<init>(AbstractEmulator.java:88)\n\tat com.github.unidbg.arm.AbstractARM64Emulator.<init>(AbstractARM64Emulator.java:59)\n\tat com.github.unidbg.linux.android.AndroidARM64Emulator.<init>(AndroidARM64Emulator.java:33)\n\tat com.github.unidbg.linux.android.AndroidEmulatorBuilder.build(AndroidEmulatorBuilder.java:22)\n\tat com.github.unidbg.linux.android.AndroidEmulatorBuilder.build(AndroidEmulatorBuilder.java:6)\n\tat com.vivo.ota.VivoOtaTracker.<init>(VivoOtaTracker.java:184)\n\tat com.vivo.ota.VivoOtaTracker.main(VivoOtaTracker.java:538)\nCaused by: java.lang.IllegalStateException: java.io.IOException: Couldn't load library library unicorn_java\n\tat unicorn.Unicorn.<clinit>(Unicorn.java:45)\n\t... 9 more\nCaused by: java.io.IOException: Couldn't load library library unicorn_java\n\tat org.scijava.nativelib.NativeLoader.loadLibrary(NativeLoader.java:141)\n\tat unicorn.Unicorn.<clinit>(Unicorn.java:43)\n\t... 9 more\nCaused by: java.lang.UnsatisfiedLinkError: /tmp/vivo_ota_ax_szfy3/libunicorn_java.so: /tmp/vivo_ota_ax_szfy3/libunicorn_java.so: undefined symbol: helper_div_i32\n\tat java.lang.ClassLoader$NativeLibrary.load(Native Method)\n\tat java.lang.ClassLoader.loadLibrary0(ClassLoader.java:1934)\n\tat java.lang.ClassLoader.loadLibrary(ClassLoader.java:1850)\n\tat java.lang.Runtime.loadLibrary0(Runtime.java:843)\n\tat java.lang.System.loadLibrary(System.java:1136)\n\tat org.scijava.nativelib.NativeLoader.loadLibrary(NativeLoader.java:136)\n\t... 10 more"
+  }
+}
