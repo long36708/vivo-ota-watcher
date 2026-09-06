@@ -1,0 +1,19 @@
+{
+  "model": {
+    "name": "vivo X100",
+    "device_type": "phone",
+    "model_sw_ver": "PD2309",
+    "device_model": "V2309A",
+    "sw_version": "15.1.15.5.W10",
+    "android_ver": 15,
+    "snp": "A0000000000000A",
+    "is_full": "true"
+  },
+  "checked_at": "2026-09-07T00:01:21+08:00",
+  "result": {
+    "status": "no_update",
+    "data": {
+      "detail": "{\"message\":\"无更新\",\"retcode\":210}"
+    }
+  }
+}

@@ -1,27 +1,25 @@
 {
-  "_comment": "默认值参考 VivoOtaTracker.java 的 System.getProperty 默认值。device_model 规律: V<数值>A (如 PD2408 -> V2408A)。sw_version 为该机型当前已装版本，用于查询更高版本。",
+  "_comment": "device_type: phone|tablet。model_sw_ver 为机型软件代码（PDxxxx），device_model 为公开型号（规律: PDxxxx -> VxxxxA）。sw_version 为该机型当前已装版本基线，用于查询更高版本；基线不在官方升级路线内会返回 No update（retcode 210）。model_sw_ver 必须唯一（作为结果文件名）。机型代码查询: https://khwang9883.github.io/MobileModels/brands/vivo_cn.html",
   "models": [
     {
       "name": "vivo X200 Pro mini",
+      "device_type": "phone",
       "model_sw_ver": "PD2419",
       "device_model": "V2419A",
       "sw_version": "15.1.15.5.W10",
-      "android_ver": "15",
+      "android_ver": 15,
       "snp": "A0000000000000A",
-      "imei": "633152449835275",
-      "is_full": "true",
-      "mode": "NORMAL"
+      "is_full": "true"
     },
     {
       "name": "vivo X100",
+      "device_type": "phone",
       "model_sw_ver": "PD2309",
       "device_model": "V2309A",
       "sw_version": "15.1.15.5.W10",
-      "android_ver": "15",
+      "android_ver": 15,
       "snp": "A0000000000000A",
-      "imei": "425907617796004",
-      "is_full": "true",
-      "mode": "NORMAL"
+      "is_full": "true"
     }
   ]
 }

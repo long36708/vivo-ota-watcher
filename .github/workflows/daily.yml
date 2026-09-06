@@ -7,24 +7,20 @@ on:
   workflow_dispatch: {}   # 支持手动触发测试
 
 permissions:
-  contents: write        # 写回 results/
-  issues: write          # 开启通知 Issue
+  contents: write        # 提交 results/ 回仓库
+  issues: write          # 发现新版本时创建/更新通知 Issue
+
+concurrency:
+  group: ota-daily-check
+  cancel-in-progress: false
 
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 60   # 源码编译 unidbg 首次较慢，给足时间
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up JDK 8
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '8'
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -34,30 +30,38 @@ jobs:
       - name: Install Python deps
         run: pip install -r requirements.txt
 
-      # 缓存 maven 仓库，避免每次重新下载依赖（unidbg install 仍会编译，但依赖已就绪）
-      - name: Cache Maven ~/.m2
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-m2-${{ hashFiles('run_source.py') }}
-          restore-keys: |
-            ${{ runner.os }}-m2-
+      # 纯 Python 方案：AES 加密已静态实现（密钥自 libvivoseckey.so 逆向提取），
+      # 无需 JDK / unidbg / Maven。查询引擎见 vivo_ota_tracker.py。
+      - name: Run OTA check
+        id: check
+        run: python run_check.py
 
-      # 源码编译 unidbg（对齐官方 README）：
-      #   clone unidbg@V0.9.9 -> 编译出正确的 libunicorn_java.so/libunicorn.so
-      #   (坏 jar 内的 Linux native 缺 13 个 TCG helper 符号，系统库也无法提供，
-      #    只能由 unidbg 源码编译时正确生成)
-      - name: Build unidbg from source
-        run: python run_source.py build
-
-      # 验证阶段：先跑通一个机型，确认 native 加载链路正常。
-      # 后续会在此接入 models.json 全量批处理 + 结果比较/通知。
-      - name: Run single model (verify)
-        continue-on-error: true
+      - name: Commit results
+        if: always()
         run: |
-          python run_source.py run $(python -c "import json;print(list(json.load(open('models.json')).keys())[0])")
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add results/
+          if git diff --cached --quiet; then
+            echo "No result changes to commit"
+          else
+            git commit -m "chore: update OTA check results $(date +%F)"
+            git push
+          fi
 
-      # 全部机型（验证通过后启用）
-      # - name: Run all models
-      #   continue-on-error: true
-      #   run: python run_source.py run-all
+      - name: Report new versions via Issue
+        if: always() && steps.check.outputs.has_new_versions == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITLE="vivo OTA 新版本汇总"
+          NUMBER=$(gh issue list --state all --search "in:title $TITLE" --limit 1 --json number --jq '.[0].number // empty')
+          TODAY=$(date +%F)
+          if [ -n "$NUMBER" ]; then
+            gh issue reopen "$NUMBER" 2>/dev/null || true
+            if ! gh issue view "$NUMBER" --json comments --jq '.comments[].body' | grep -qF "报告日期：$TODAY"; then
+              gh issue comment "$NUMBER" --body-file issue_body.md
+            fi
+          else
+            gh issue create --title "$TITLE" --body-file issue_body.md
+          fi
