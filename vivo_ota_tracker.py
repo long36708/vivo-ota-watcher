@@ -92,6 +92,11 @@ class UpdateInfo:
     size_mb: Optional[int] = None
     download_url: Optional[str] = None
     changelog_url: Optional[str] = None
+    # 服务器返回的原始结构（保持字段原样，便于落盘归档）
+    retcode: Optional[int] = None
+    message: Optional[str] = None
+    patch: Optional[Dict] = None
+    ext: Optional[Dict] = None
     raw_response: Optional[str] = None
 
 
@@ -566,26 +571,68 @@ def build_request_params(config: DeviceConfig) -> Dict[str, str]:
     return params
 
 
+def parse_response_data(response: str) -> Dict:
+    """
+    Parse decrypted response into its payload object.
+
+    有更新时响应形如 {"data":{"patch":{...},"ext":{...},"retcode":0}}，
+    无更新/出错时形如 {"message":"无更新","retcode":210}（无 data 层）。
+    两种情况都返回最内层的对象；解析失败返回空字典。
+    """
+    try:
+        payload = json.loads(response)
+    except (ValueError, TypeError):
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    data = payload.get("data")
+    if not isinstance(data, dict):
+        return payload
+    # 有更新时 retcode 挂在最外层，合并进来方便归档
+    merged = dict(data)
+    for key in ("retcode", "message"):
+        if merged.get(key) is None and payload.get(key) is not None:
+            merged[key] = payload[key]
+    return merged
+
+
 def parse_update_response(response: str) -> UpdateInfo:
     """
     Parse update response into UpdateInfo.
 
-    Args:
-        response: Decrypted response string
-
-    Returns:
-        Parsed UpdateInfo object
+    优先按 JSON 结构解析，保留 patch / ext 原始字段；
+    响应不是 JSON 时回退到字符串提取。
     """
     info = UpdateInfo(raw_response=response)
+    data = parse_response_data(response)
 
-    info.version = extract_json_str(response, 'version":"')
-    info.filename = extract_json_str(response, 'pkName":"')
-    info.size = extract_json_str(response, 'pkLen":"')
-    info.size_mb = parse_size(info.size) // 1048576 if info.size != "(Not found)" else 0
-    info.changelog_url = extract_json_str(response, 'h5Url":"')
+    info.retcode = data.get("retcode")
+    info.message = data.get("message")
+
+    patch = data.get("patch")
+    if not isinstance(patch, dict):
+        # 非 JSON 响应：沿用旧的字符串提取
+        version = extract_json_str(response, 'version":"')
+        info.version = None if version == "(Not found)" else version
+        info.filename = extract_json_str(response, 'pkName":"')
+        info.size = extract_json_str(response, 'pkLen":"')
+        info.size_mb = parse_size(info.size) // 1048576 if info.size not in (None, "(Not found)") else 0
+        info.changelog_url = extract_json_str(response, 'h5Url":"')
+        pk_url = extract_pk_url(response)
+    else:
+        info.patch = patch
+        info.version = patch.get("version")
+        info.filename = patch.get("pkName")
+        info.size = patch.get("pkLen")
+        info.size_mb = parse_size(str(info.size)) // 1048576 if info.size else 0
+        info.changelog_url = patch.get("h5Url")
+        pk_url = patch.get("pk")
+
+    ext = data.get("ext")
+    if isinstance(ext, dict):
+        info.ext = ext
 
     # Extract download URL from pk field
-    pk_url = extract_pk_url(response)
     if pk_url:
         try:
             query_start = pk_url.find("?")

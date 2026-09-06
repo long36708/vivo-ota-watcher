@@ -41,6 +41,8 @@ ISSUE_BODY_FILE = ROOT / "issue_body.md"
 # vivo_ota_tracker 解析不到字段时使用的占位符
 NOT_FOUND = "(Not found)"
 DEFAULT_INTERVAL_SECONDS = 10
+# 每个结果文件最多保留的历史版本条数
+HISTORY_LIMIT = 50
 
 STATUS_LABELS = {
     "success": "✅ 有更新",
@@ -91,24 +93,66 @@ def clean(value: Optional[str]) -> Optional[str]:
     return value
 
 
+def drop_none(mapping: dict) -> dict:
+    """丢弃值为 None 的字段，避免落盘大量 null。"""
+    return {k: v for k, v in mapping.items() if v is not None}
+
+
+def patch_of(data: dict) -> dict:
+    """取结果中的 patch 对象（不存在时返回空字典）。"""
+    patch = data.get("patch")
+    return patch if isinstance(patch, dict) else {}
+
+
+def result_version(data: dict) -> Optional[str]:
+    return patch_of(data).get("version")
+
+
+def result_filename(data: dict) -> Optional[str]:
+    return patch_of(data).get("pkName")
+
+
+def result_size_mb(data: dict) -> int:
+    """从 pkLen（字节）换算 MB。"""
+    pk_len = patch_of(data).get("pkLen")
+    try:
+        return int(pk_len) // 1048576
+    except (TypeError, ValueError):
+        return 0
+
+
+def result_changelog(data: dict) -> Optional[str]:
+    return patch_of(data).get("h5Url")
+
+
 def classify(info: Optional[UpdateInfo], reason: Optional[str]) -> dict:
-    """把查询结果归类为 success / no_update / error 三种状态。"""
+    """把查询结果归类为 success / no_update / error 三种状态。
+
+    success 时原样保留服务器返回的 patch / ext 结构，
+    仅把二次请求换来的 download_url 放在与 patch 同级的顶层。
+    """
     if reason is not None:
         return {"status": "error", "data": {"reason": reason}}
-    version = clean(info.version)
-    if version is None:
+
+    if not info.patch:
         # 服务器正常响应但没有可用版本（如基线不在升级路线内 retcode 210）
-        return {"status": "no_update", "data": {"detail": (info.raw_response or "")[:400]}}
+        return {
+            "status": "no_update",
+            "data": drop_none({
+                "retcode": info.retcode,
+                "message": info.message,
+                "detail": (info.raw_response or "")[:400] or None,
+            }),
+        }
+
     return {
         "status": "success",
-        "data": {
-            "version": version,
-            "filename": clean(info.filename),
-            "size": clean(info.size),
-            "size_mb": info.size_mb or 0,
+        "data": drop_none({
+            "retcode": info.retcode,
+            "patch": info.patch,
+            "ext": info.ext,
             "download_url": clean(info.download_url),
-            "changelog_url": clean(info.changelog_url),
-        },
+        }),
     }
 
 
@@ -123,7 +167,8 @@ def check_model(entry: dict, verbose: bool) -> dict:
     if result["status"] == "success":
         print_update_info(info)
     else:
-        detail = reason if reason is not None else result["data"]["detail"]
+        data = result["data"]
+        detail = data.get("reason") or data.get("message") or data.get("detail") or ""
         print(f"  [{result['status']}] {detail}")
     return result
 
@@ -143,9 +188,72 @@ def load_previous(entry: dict) -> Optional[dict]:
         return None
 
 
-def save_result(entry: dict, result: dict, checked_at: str) -> None:
+def history_entry(result: dict, checked_at: str) -> Optional[dict]:
+    """为本次成功结果构造一条升级轨迹记录；无可用版本时返回 None。"""
+    if result["status"] != "success":
+        return None
+    data = result["data"]
+    ext = data.get("ext")
+    ext = ext if isinstance(ext, dict) else {}
+    record = drop_none({
+        "version": result_version(data),
+        "pkName": result_filename(data),
+        "pkSha256": patch_of(data).get("pkSha256"),
+        "pkLen": patch_of(data).get("pkLen"),
+        "download_url": data.get("download_url"),
+        "h5Url": result_changelog(data),
+        "isFull": ext.get("isFull"),
+        "ggBugDate": ext.get("ggBugDate"),
+    })
+    if not record.get("version"):
+        return None
+    record["first_seen"] = checked_at
+    record["last_seen"] = checked_at
+    return record
+
+
+def merge_history(previous: Optional[dict], result: dict, checked_at: str) -> list:
+    """把本次结果并入历史轨迹。
+
+    - 只记录 success 结果（no_update / error 不入历史，避免每天刷噪音）；
+    - 与最后一条版本+包名相同则只刷新 last_seen，不新增条目；
+    - 超过 HISTORY_LIMIT 时丢弃最早的条目。
+    """
+    history: list = []
+    if previous:
+        old = previous.get("history")
+        if isinstance(old, list):
+            history = [item for item in old if isinstance(item, dict)]
+
+    record = history_entry(result, checked_at)
+    if record is None:
+        return history
+
+    last = history[-1] if history else None
+    same_as_last = (
+        last is not None
+        and last.get("version") == record["version"]
+        and last.get("pkName") == record["pkName"]
+    )
+    if same_as_last:
+        last["last_seen"] = checked_at
+        # 历史条目缺字段时（如新增了字段）用本次结果补齐
+        for key, value in record.items():
+            if key in ("first_seen", "last_seen"):
+                continue
+            if last.get(key) is None and value is not None:
+                last[key] = value
+        return history
+
+    history.append(record)
+    return history[-HISTORY_LIMIT:]
+
+
+def save_result(entry: dict, result: dict, checked_at: str, history: list) -> None:
     RESULTS_DIR.mkdir(exist_ok=True)
     payload = {"model": entry, "checked_at": checked_at, "result": result}
+    if history:
+        payload["history"] = history
     path = result_path(entry)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"  Saved: {path.relative_to(ROOT)}")
@@ -168,8 +276,8 @@ def is_new_version(previous: Optional[dict], current: dict) -> bool:
     prev_data = prev_result.get("data") or {}
     current_data = current["data"]
     return (
-        current_data["version"] != prev_data.get("version")
-        or current_data["filename"] != prev_data.get("filename")
+        result_version(current_data) != result_version(prev_data)
+        or result_filename(current_data) != result_filename(prev_data)
     )
 
 
@@ -177,15 +285,17 @@ def build_issue_body(new_items: list[tuple[dict, dict]], checked_at: str) -> str
     lines = ["## 📢 检测到新的 OTA 版本", "", f"报告日期：{checked_at}", ""]
     for entry, data in new_items:
         name = entry.get("name") or entry["model_sw_ver"]
+        filename = result_filename(data)
         lines += [
             f"### {name}（{entry['model_sw_ver']} / {entry['device_model']}）",
             "",
-            f"- **新版本**：`{data['version']}`",
+            f"- **新版本**：`{result_version(data)}`",
         ]
-        if data.get("filename"):
-            lines.append(f"- **升级包**：`{data['filename']}`（{data.get('size_mb', 0)} MB）")
-        if data.get("changelog_url"):
-            lines.append(f"- **更新日志**：<{data['changelog_url']}>")
+        if filename:
+            lines.append(f"- **升级包**：`{filename}`（{result_size_mb(data)} MB）")
+        changelog = result_changelog(data)
+        if changelog:
+            lines.append(f"- **更新日志**：<{changelog}>")
         if data.get("download_url"):
             lines.append(f"- **下载直链**：<{data['download_url']}>")
         lines.append("")
@@ -196,7 +306,7 @@ def write_new_version_files(new_items: list[tuple[dict, dict]], checked_at: str)
     """每次运行都覆写，避免残留过期的通知内容。"""
     lines = [
         f"{entry.get('name') or entry['model_sw_ver']} ({entry['model_sw_ver']}): "
-        f"新版本 {data['version']}"
+        f"新版本 {result_version(data)}"
         for entry, data in new_items
     ]
     NEW_VERSIONS_FILE.write_text(
@@ -285,7 +395,8 @@ def main() -> int:
 
         previous = load_previous(entry)
         new_version = is_new_version(previous, result)
-        save_result(entry, result, checked_at)
+        history = merge_history(previous, result, checked_at)
+        save_result(entry, result, checked_at, history)
         if new_version:
             new_items.append((entry, result["data"]))
 
@@ -294,8 +405,8 @@ def main() -> int:
             "name": name,
             "model_sw_ver": entry["model_sw_ver"],
             "status": result["status"],
-            "version": data.get("version"),
-            "size_mb": data.get("size_mb"),
+            "version": result_version(data),
+            "size_mb": result_size_mb(data),
             "is_new": new_version,
         })
 

@@ -6,7 +6,7 @@
       "device_type": "phone",
       "model_sw_ver": "PD2419",
       "device_model": "V2419A",
-      "sw_version": "15.1.15.5.W10",
+      "sw_version": "15.0.33.7.W10",
       "android_ver": 15,
       "snp": "A0000000000000A",
       "is_full": "true"
@@ -16,8 +16,18 @@
       "device_type": "phone",
       "model_sw_ver": "PD2309",
       "device_model": "V2309A",
-      "sw_version": "15.1.15.5.W10",
+      "sw_version": "15.1.21.0.W10",
       "android_ver": 15,
+      "snp": "A0000000000000A",
+      "is_full": "true"
+    },
+    {
+      "name": "vivo X500",
+      "device_type": "phone",
+      "model_sw_ver": "PD2609",
+      "device_model": "V2609A",
+      "sw_version": "17.0.12.11.W10",
+      "android_ver": 17,
       "snp": "A0000000000000A",
       "is_full": "true"
     }
