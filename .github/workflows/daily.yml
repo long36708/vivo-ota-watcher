@@ -39,7 +39,8 @@ jobs:
         run: python run_check.py
 
       - name: Commit results
-        if: always()
+        # 全部机型都是 no_update 时跳过提交（文件内容只有时间戳变化）
+        if: always() && steps.check.outputs.all_no_update != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

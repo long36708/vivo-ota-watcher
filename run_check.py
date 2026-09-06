@@ -423,6 +423,11 @@ def main() -> int:
     write_new_version_files(new_items, checked_at)
     write_step_summary(summary_rows, len(new_items), checked_at)
     set_github_output("has_new_versions", "true" if new_items else "false")
+    # 全部机型都是 no_update 时无需提交结果文件（内容只有时间戳变化）
+    all_no_update = bool(summary_rows) and all(
+        row["status"] == "no_update" for row in summary_rows
+    )
+    set_github_output("all_no_update", "true" if all_no_update else "false")
 
     print(
         f"\n=== Done: {len(models)} models, "

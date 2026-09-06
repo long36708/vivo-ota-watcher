@@ -84,7 +84,7 @@ python vivo_ota_tracker.py -t phone -m PD2419 -d V2419A -v 15.0.33.7.W10 -a 15 -
 | 22:00 | `0 14 * * *` |
 
 1. 安装 Python 依赖后运行 `python run_check.py`。
-2. 将 `results/` 的变更以 `chore: update OTA check results <date>` 提交回仓库。
+2. 将 `results/` 的变更以 `chore: update OTA check results <date>` 提交回仓库；**全部机型都是 `no_update` 时跳过提交**（此时文件内容只有 `checked_at` 变化，避免每天 4 次运行刷无意义的 commit）。
 3. 发现新版本时：创建/更新标题为 **「vivo OTA 新版本汇总」** 的 Issue（含版本、包大小、changelog、下载直链）。通知按 `机型:版本` 指纹去重——同一批版本只通知一次，**同一天内后续出现的新版本仍会通知**。
 4. `concurrency` 防止两次运行重叠。
 
