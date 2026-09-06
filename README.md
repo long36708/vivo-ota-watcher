@@ -45,7 +45,7 @@ python run_check.py --interval 3
 python vivo_ota_tracker.py -t phone -m PD2419 -d V2419A -v 15.0.33.7.W10 -a 15 --isfull true
 ```
 
-每次运行会更新 `results/<model_sw_ver>.json`，并与上次成功结果比较（比较 `patch.version` 与 `ext.isFull`，两者都未变即视为同一版本，包名/签名/直链变化不算新版本，既不发通知也不追加 `history`）：
+每次运行会更新 `results/<model_sw_ver>.json`，并与上次成功结果比较（比较 `patch.version` 与 `ext.isFull`，两者都未变即视为同一版本，包名/签名/直链变化不算新版本，既不发通知也不追加 `history`；此时 `result` 直接沿用上次内容，只有 `checked_at` 与 `history[].last_seen` 会刷新）：
 
 - `success`：服务器返回了更新包，`data` 中原样保留服务器结构：`patch`（版本、包名、`pk` 重定向链接、`pkSha256`、`pkLen`、`h5Url`…）、`ext`（`isFull`、`storage`、`timeStamp`…），另加二次请求换来的 `download_url`
 - `no_update`：服务器正常响应但没有可用版本（常见于基线版本不在官方升级路线内，retcode 210），记录 `retcode` / `message`

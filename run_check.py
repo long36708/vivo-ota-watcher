@@ -5,6 +5,9 @@
 结果写入 results/<model_sw_ver>.json，并与上次成功结果比较
 （version 与 ext.isFull 都未变即视为同一版本，包名/签名/直链变化不算新版本）：
 
+- 判定为同一版本时不发通知、不追加 history，且 result 直接沿用上次内容，
+  避免直链签名 / h5Url 之类的噪声把结果刷成新值；
+
 - 发现新版本时写 new_versions.txt 与 issue_body.md（均不入库），
   供 GitHub Actions 的结果提交 / Issue 通知步骤消费；
 - 存在 $GITHUB_STEP_SUMMARY 时输出 Markdown 摘要表；
@@ -419,6 +422,14 @@ def main() -> int:
         previous = load_previous(entry)
         new_version = is_new_version(previous, result)
         history = merge_history(previous, result, checked_at)
+        if not new_version:
+            # 版本未变：沿用上次的 result，避免直链签名 / h5Url 等噪声刷新结果内容
+            previous_result = (previous or {}).get("result")
+            if (
+                isinstance(previous_result, dict)
+                and previous_result.get("status") == result["status"]
+            ):
+                result = previous_result
         save_result(entry, result, checked_at, history)
         if new_version:
             new_items.append((entry, result["data"]))
