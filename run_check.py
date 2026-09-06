@@ -282,7 +282,17 @@ def is_new_version(previous: Optional[dict], current: dict) -> bool:
 
 
 def build_issue_body(new_items: list[tuple[dict, dict]], checked_at: str) -> str:
-    lines = ["## 📢 检测到新的 OTA 版本", "", f"报告日期：{checked_at}", ""]
+    # 指纹行：一天多次运行时，用 机型:版本 列表判断是否已通知过同一批版本，
+    # 避免同一天内后续出现的新版本被"当天已评论"规则吞掉
+    fingerprint = (
+        "<!-- ota-fp: "
+        + ";".join(
+            f"{entry['model_sw_ver']}:{result_version(data)}"
+            for entry, data in new_items
+        )
+        + " -->"
+    )
+    lines = [fingerprint, "", "## 📢 检测到新的 OTA 版本", "", f"报告日期：{checked_at}", ""]
     for entry, data in new_items:
         name = entry.get("name") or entry["model_sw_ver"]
         filename = result_filename(data)

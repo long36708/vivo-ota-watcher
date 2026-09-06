@@ -74,11 +74,18 @@ python vivo_ota_tracker.py -t phone -m PD2419 -d V2419A -v 15.0.33.7.W10 -a 15 -
 
 ## GitHub Actions 自动运行
 
-[`.github/workflows/daily.yml`](.github/workflows/daily.yml) 每天 **北京时间 09:00**（`cron: '0 1 * * *'`）自动执行，也支持 `workflow_dispatch` 手动触发：
+[`.github/workflows/daily.yml`](.github/workflows/daily.yml) 每天 **北京时间 09:00 / 19:00 / 20:30 / 22:00** 自动执行，也支持 `workflow_dispatch` 手动触发：
+
+| 北京时间 | cron (UTC) |
+|---|---|
+| 09:00 | `0 1 * * *` |
+| 19:00 | `0 11 * * *` |
+| 20:30 | `30 12 * * *` |
+| 22:00 | `0 14 * * *` |
 
 1. 安装 Python 依赖后运行 `python run_check.py`。
 2. 将 `results/` 的变更以 `chore: update OTA check results <date>` 提交回仓库。
-3. 发现新版本时：创建/更新标题为 **「vivo OTA 新版本汇总」** 的 Issue（含版本、包大小、changelog、下载直链；同一天重复运行不会重复评论），并在 workflow 运行摘要（Summary）中展示结果表格。
+3. 发现新版本时：创建/更新标题为 **「vivo OTA 新版本汇总」** 的 Issue（含版本、包大小、changelog、下载直链）。通知按 `机型:版本` 指纹去重——同一批版本只通知一次，**同一天内后续出现的新版本仍会通知**。
 4. `concurrency` 防止两次运行重叠。
 
 ## 自定义监控机型

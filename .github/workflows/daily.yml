@@ -2,8 +2,10 @@ name: Vivo OTA Daily Check
 
 on:
   schedule:
-    # 每天北京时间 09:00（UTC+8 = 01:00 UTC）
-    - cron: '0 1 * * *'
+    # 每天北京时间 09:00 / 19:00 / 22:00（UTC+8，对应 UTC 01:00 / 11:00 / 14:00）
+    - cron: '0 1,11,14 * * *'
+    # 每天北京时间 20:30（UTC 12:30）
+    - cron: '30 12 * * *'
   workflow_dispatch: {}   # 支持手动触发测试
 
 permissions:
@@ -56,10 +58,14 @@ jobs:
         run: |
           TITLE="vivo OTA 新版本汇总"
           NUMBER=$(gh issue list --state all --search "in:title $TITLE" --limit 1 --json number --jq '.[0].number // empty')
-          TODAY=$(date +%F)
+          # 指纹行（机型:版本 列表）：同一批版本只通知一次，同天内出现新版本仍能通知
+          FP=$(head -n 1 issue_body.md)
           if [ -n "$NUMBER" ]; then
             gh issue reopen "$NUMBER" 2>/dev/null || true
-            if ! gh issue view "$NUMBER" --json comments --jq '.comments[].body' | grep -qF "报告日期：$TODAY"; then
+            EXISTING=$(gh issue view "$NUMBER" --json body,comments --jq '[.body] + [.comments[].body] | join("\n")')
+            if printf '%s' "$EXISTING" | grep -qF "$FP"; then
+              echo "Same versions already reported, skip"
+            else
               gh issue comment "$NUMBER" --body-file issue_body.md
             fi
           else
