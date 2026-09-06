@@ -2,7 +2,8 @@
 """Vivo OTA 每日检测编排脚本。
 
 读取 models.json 中配置的机型，逐个调用 vivo_ota_tracker 查询 OTA 更新包，
-结果写入 results/<model_sw_ver>.json，并与上次成功结果比较：
+结果写入 results/<model_sw_ver>.json，并与上次成功结果比较
+（version 与 ext.isFull 都未变即视为同一版本，包名/签名/直链变化不算新版本）：
 
 - 发现新版本时写 new_versions.txt 与 issue_body.md（均不入库），
   供 GitHub Actions 的结果提交 / Issue 通知步骤消费；
@@ -125,6 +126,23 @@ def result_changelog(data: dict) -> Optional[str]:
     return patch_of(data).get("h5Url")
 
 
+def result_is_full(data: dict):
+    """取 ext.isFull（全量包标志）。"""
+    ext = data.get("ext")
+    return ext.get("isFull") if isinstance(ext, dict) else None
+
+
+def same_target(previous: dict, current: dict) -> bool:
+    """判定两次结果是否指向同一个升级目标。
+
+    规则：version 与 ext.isFull 都未变即视为相同（包名/签名/直链变化不算新版本）。
+    """
+    return (
+        result_version(previous) == result_version(current)
+        and result_is_full(previous) == result_is_full(current)
+    )
+
+
 def classify(info: Optional[UpdateInfo], reason: Optional[str]) -> dict:
     """把查询结果归类为 success / no_update / error 三种状态。
 
@@ -216,7 +234,7 @@ def merge_history(previous: Optional[dict], result: dict, checked_at: str) -> li
     """把本次结果并入历史轨迹。
 
     - 只记录 success 结果（no_update / error 不入历史，避免每天刷噪音）；
-    - 与最后一条版本+包名相同则只刷新 last_seen，不新增条目；
+    - 与最后一条的 version + isFull 相同则只刷新 last_seen，不新增条目；
     - 超过 HISTORY_LIMIT 时丢弃最早的条目。
     """
     history: list = []
@@ -233,7 +251,7 @@ def merge_history(previous: Optional[dict], result: dict, checked_at: str) -> li
     same_as_last = (
         last is not None
         and last.get("version") == record["version"]
-        and last.get("pkName") == record["pkName"]
+        and last.get("isFull") == record.get("isFull")
     )
     if same_as_last:
         last["last_seen"] = checked_at
@@ -264,7 +282,7 @@ def is_new_version(previous: Optional[dict], current: dict) -> bool:
 
     - 本次查询失败不参与判定；本次无更新不算新版本；
     - 上次无成功结果（首次运行 / no_update / error）而本次查到更新，视为新版本；
-    - 否则比较 version 与 filename，任一变化即为新版本。
+    - 否则比较 version 与 ext.isFull，任一变化即为新版本。
     """
     if current["status"] != "success":
         return False
@@ -273,12 +291,7 @@ def is_new_version(previous: Optional[dict], current: dict) -> bool:
     prev_result = previous.get("result") or {}
     if prev_result.get("status") != "success":
         return True
-    prev_data = prev_result.get("data") or {}
-    current_data = current["data"]
-    return (
-        result_version(current_data) != result_version(prev_data)
-        or result_filename(current_data) != result_filename(prev_data)
-    )
+    return not same_target(prev_result.get("data") or {}, current["data"])
 
 
 def build_issue_body(new_items: list[tuple[dict, dict]], checked_at: str) -> str:

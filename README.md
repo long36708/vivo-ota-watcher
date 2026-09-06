@@ -45,7 +45,7 @@ python run_check.py --interval 3
 python vivo_ota_tracker.py -t phone -m PD2419 -d V2419A -v 15.0.33.7.W10 -a 15 --isfull true
 ```
 
-每次运行会更新 `results/<model_sw_ver>.json`，并与上次成功结果比较（比较 `patch.version` 与 `patch.pkName`）：
+每次运行会更新 `results/<model_sw_ver>.json`，并与上次成功结果比较（比较 `patch.version` 与 `ext.isFull`，两者都未变即视为同一版本，包名/签名/直链变化不算新版本，既不发通知也不追加 `history`）：
 
 - `success`：服务器返回了更新包，`data` 中原样保留服务器结构：`patch`（版本、包名、`pk` 重定向链接、`pkSha256`、`pkLen`、`h5Url`…）、`ext`（`isFull`、`storage`、`timeStamp`…），另加二次请求换来的 `download_url`
 - `no_update`：服务器正常响应但没有可用版本（常见于基线版本不在官方升级路线内，retcode 210），记录 `retcode` / `message`
@@ -70,7 +70,7 @@ python vivo_ota_tracker.py -t phone -m PD2419 -d V2419A -v 15.0.33.7.W10 -a 15 -
 ]
 ```
 
-版本+包名与最后一条相同则只刷新 `last_seen`，不同才追加新条目，最多保留最近 50 条（`HISTORY_LIMIT`）。这样 `results/` 里的 `result` 仍是"最新一次"，历史版本不会被覆盖丢失。
+与最后一条的 `version` + `isFull` 相同则只刷新 `last_seen`（并补齐缺失字段），不同才追加新条目，最多保留最近 50 条（`HISTORY_LIMIT`）。这样 `results/` 里的 `result` 仍是"最新一次"，历史版本不会被覆盖丢失。
 
 ## GitHub Actions 自动运行
 
