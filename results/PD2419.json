@@ -9,14 +9,14 @@
     "snp": "A0000000000000A",
     "is_full": "true"
   },
-  "checked_at": "2026-09-07T00:56:58+08:00",
+  "checked_at": "2026-09-06T17:08:39+00:00",
   "result": {
     "status": "success",
     "data": {
       "retcode": 0,
       "patch": {
         "version": "16.1.12.28.W10.V000L1",
-        "pk": "https://sysupgrade.vivo.com.cn/pk/redir.do?name=%40a176753%3D%3D13oomKwDyMzJHN9CHMdZXNwlS09UHYnYiZPJiNgUiN8JiY5ZiNyDSMr1yMw3QNdJQNzjz3kwibnxTakxdK12&fileType=relative&fileLength=11653209780&packageType=patch",
+        "pk": "https://sysupgrade.vivo.com.cn/pk/redir.do?name=%40a177848%3D%3D13oomKwDyMzJHN9CHMdZXNwlS09UHYnYiZPJiNgUiN8JiY5ZiNyDSMr1yMw3QNdJQNzjz3kwibnxTakxdK61&fileType=relative&fileLength=11653209780&packageType=patch",
         "pkName": "20260717075431f8eb01ea1b4affdeb9912664db0b2741.zip",
         "pkSha256": "90967a0643765b2d1aa0501a3c762e938215a490ae29cf44570d3537f6a97613",
         "pkLen": "11653209780",
@@ -52,7 +52,7 @@
         "nightUpgrade": 0,
         "bindChargeDay": 0,
         "space": 100,
-        "timeStamp": 1788713818962,
+        "timeStamp": 1788714520446,
         "logoConfig": "{   \"line1\": [     {       \"text\": \"Origin\",       \"font_weight\": \"90\"     },     {       \"text\": \"OS \",       \"font_weight\": \"40\"     },     {       \"text\": \"6\",       \"font_weight\": \"90\"     }   ] }",
         "normalLogo": "",
         "darkLogo": "",
@@ -65,7 +65,7 @@
         "ggBugDate": "2026-06-01",
         "ggInviteSwitch": 3
       },
-      "download_url": "https://sysuptxdl.vivo.com.cn/upgrade/oem/files/20260717075431f8eb01ea1b4affdeb9912664db0b2741.zip?sign=b90eb0c588f3ad3255503a49eb9fdbc5&t=6ac5285b"
+      "download_url": "https://sysupdxdl.vivo.com.cn/upgrade/oem/files/20260717075431f8eb01ea1b4affdeb9912664db0b2741.zip?sign=179dd8f0ac1f7a2ebb9180b08bf94afd&t=6ac52b19"
     }
   },
   "history": [
@@ -77,7 +77,7 @@
       "download_url": "https://sysupdxdl.vivo.com.cn/upgrade/oem/files/20260717075431f8eb01ea1b4affdeb9912664db0b2741.zip?sign=690dbc3bb1d69885fc1217808067d37f&t=6ac52811",
       "h5Url": "https://sysdesc.vivo.com.cn/upgrade/h5/2025/10/2025102923283323282148-2/index.html",
       "first_seen": "2026-09-07T00:55:44+08:00",
-      "last_seen": "2026-09-07T00:56:58+08:00",
+      "last_seen": "2026-09-06T17:08:39+00:00",
       "isFull": 1,
       "ggBugDate": "2026-06-01"
     }
