@@ -4,12 +4,12 @@
     "device_type": "phone",
     "model_sw_ver": "PD2419",
     "device_model": "V2419A",
-    "sw_version": "15.0.33.7.W10",
+    "sw_version": "15.1.15.5.W10",
     "android_ver": 15,
     "snp": "A0000000000000A",
     "is_full": "true"
   },
-  "checked_at": "2026-09-07T00:01:21+08:00",
+  "checked_at": "2026-09-06T16:35:53+00:00",
   "result": {
     "status": "no_update",
     "data": {
