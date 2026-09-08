@@ -9,7 +9,7 @@
     "snp": "A0000000000000A",
     "is_full": "true"
   },
-  "checked_at": "2026-09-08T05:26:46+00:00",
+  "checked_at": "2026-09-08T14:49:18+00:00",
   "result": {
     "status": "success",
     "data": {
@@ -77,7 +77,7 @@
       "download_url": "https://sysupdxdl.vivo.com.cn/upgrade/oem/files/20260717075431f8eb01ea1b4affdeb9912664db0b2741.zip?sign=690dbc3bb1d69885fc1217808067d37f&t=6ac52811",
       "h5Url": "https://sysdesc.vivo.com.cn/upgrade/h5/2025/10/2025102923283323282148-2/index.html",
       "first_seen": "2026-09-07T00:55:44+08:00",
-      "last_seen": "2026-09-08T05:26:46+00:00",
+      "last_seen": "2026-09-08T14:49:18+00:00",
       "isFull": 1,
       "ggBugDate": "2026-06-01"
     }
