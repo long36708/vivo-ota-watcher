@@ -4,43 +4,40 @@
     "device_type": "phone",
     "model_sw_ver": "PD2419",
     "device_model": "V2419A",
-    "sw_version": "15.0.33.7.W10",
+    "sw_version": "16.1.12.38.W10",
     "android_ver": 15,
     "snp": "A0000000000000A",
     "is_full": "true"
   },
-  "checked_at": "2026-09-10T14:41:48+00:00",
+  "checked_at": "2026-09-10T23:02:30+08:00",
   "result": {
     "status": "success",
     "data": {
       "retcode": 0,
       "patch": {
-        "version": "16.1.12.28.W10.V000L1",
-        "pk": "https://sysupgrade.vivo.com.cn/pk/redir.do?name=%40a177848%3D%3D13oomKwDyMzJHN9CHMdZXNwlS09UHYnYiZPJiNgUiN8JiY5ZiNyDSMr1yMw3QNdJQNzjz3kwibnxTakxdK61&fileType=relative&fileLength=11653209780&packageType=patch",
-        "pkName": "20260717075431f8eb01ea1b4affdeb9912664db0b2741.zip",
-        "pkSha256": "90967a0643765b2d1aa0501a3c762e938215a490ae29cf44570d3537f6a97613",
-        "pkLen": "11653209780",
-        "h5Zip": "https://sysdesc.vivo.com.cn/upgrade/h5/2025/10/2025102923283323282148-2.zip",
-        "h5ZipSha256": "5b9556f8b7c5ac561711da5c48762ae64397a7d00cfad3da35fe69e4a6e2129a",
-        "h5Url": "https://sysdesc.vivo.com.cn/upgrade/h5/2025/10/2025102923283323282148-2/index.html",
+        "version": "16.1.12.38.W10.V000L1",
+        "pk": "https://sysupgrade.vivo.com.cn/pk/redir.do?name=%40a184077%3D%3D13oomKXYXNPFHYwNdMPFXY4JnNyDiYz6yN5FH0wDnMyJi0lMHNBhXNy1S0zhQNdJQNzjz3kwibnxTakxdK30&fileType=relative&fileLength=11742328153&packageType=patch",
+        "pkName": "20260829032850cd9b36d18a8352ed32b9f147c1da426c.zip",
+        "pkSha256": "80c8873ac8730b2d6288bd560e878b3910f6f637f9725f8edeeb688af08cf21f",
+        "pkLen": "11742328153",
+        "h5Zip": "https://sysdesc.vivo.com.cn/upgrade/h5/2026/09/202609072023420776778-2.zip",
+        "h5ZipSha256": "ea64abeed56cdae21db87281ec95911a3b9758aa8b5ac92d0969e609d413c281",
+        "h5Url": "https://sysdesc.vivo.com.cn/upgrade/h5/2026/09/202609072023420776778-2/index.html",
         "logVer": 2,
         "highLightFlag": 0,
         "way": 1,
-        "waySetting": "{}",
-        "crossVersion": "OriginOS 6",
+        "crossVersion": "",
         "osArdCross": "",
         "otaType": "AB",
         "osShowVer": "",
         "osVer": "Funtouch 16.0",
         "ardVer": "16",
-        "ggBug": 1,
+        "ggBug": 0,
         "space": 0,
         "checkString": ""
       },
       "ext": {
         "isFull": 1,
-        "bannerPic": "https://sysdesc.vivo.com.cn/upgrade/other/files/logo-OS6.svg",
-        "textColor": "255,255,86,102",
         "storage": 600,
         "t1": 38,
         "t2": 50,
@@ -52,20 +49,13 @@
         "nightUpgrade": 0,
         "bindChargeDay": 0,
         "space": 100,
-        "timeStamp": 1788714520446,
-        "logoConfig": "{   \"line1\": [     {       \"text\": \"Origin\",       \"font_weight\": \"90\"     },     {       \"text\": \"OS \",       \"font_weight\": \"40\"     },     {       \"text\": \"6\",       \"font_weight\": \"90\"     }   ] }",
-        "normalLogo": "",
-        "darkLogo": "",
-        "noticeLogo": "",
-        "winLogo": "",
-        "winDarkLogo": "",
-        "logoContent": "",
+        "timeStamp": 1789051480507,
         "osVer": "",
         "apiLevel": "",
-        "ggBugDate": "2026-06-01",
+        "ggBugDate": "2026-08-01",
         "ggInviteSwitch": 3
       },
-      "download_url": "https://sysupdxdl.vivo.com.cn/upgrade/oem/files/20260717075431f8eb01ea1b4affdeb9912664db0b2741.zip?sign=179dd8f0ac1f7a2ebb9180b08bf94afd&t=6ac52b19"
+      "download_url": "https://sysupdxdl.vivo.com.cn/upgrade/oem/files/20260829032850cd9b36d18a8352ed32b9f147c1da426c.zip"
     }
   },
   "history": [
@@ -80,6 +70,18 @@
       "last_seen": "2026-09-10T14:41:48+00:00",
       "isFull": 1,
       "ggBugDate": "2026-06-01"
+    },
+    {
+      "version": "16.1.12.38.W10.V000L1",
+      "pkName": "20260829032850cd9b36d18a8352ed32b9f147c1da426c.zip",
+      "pkSha256": "80c8873ac8730b2d6288bd560e878b3910f6f637f9725f8edeeb688af08cf21f",
+      "pkLen": "11742328153",
+      "h5Url": "https://sysdesc.vivo.com.cn/upgrade/h5/2026/09/202609072023420776778-2/index.html",
+      "isFull": 1,
+      "ggBugDate": "2026-08-01",
+      "first_seen": "2026-09-10T22:44:40+08:00",
+      "last_seen": "2026-09-10T23:02:30+08:00",
+      "download_url": "https://sysupdxdl.vivo.com.cn/upgrade/oem/files/20260829032850cd9b36d18a8352ed32b9f147c1da426c.zip"
     }
   ]
 }
