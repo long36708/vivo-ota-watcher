@@ -429,6 +429,13 @@ def main() -> int:
                 isinstance(previous_result, dict)
                 and previous_result.get("status") == result["status"]
             ):
+                # 沿用上次结果，但补齐上次缺失的字段（如后来才拿到的 download_url）
+                kept_data = previous_result.get("data")
+                current_data = result.get("data")
+                if isinstance(kept_data, dict) and isinstance(current_data, dict):
+                    for key, value in current_data.items():
+                        if kept_data.get(key) is None and value is not None:
+                            kept_data[key] = value
                 result = previous_result
         save_result(entry, result, checked_at, history)
         if new_version:

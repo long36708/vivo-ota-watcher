@@ -65,6 +65,9 @@ BASE_URL = "https://sysupgrade.vivo.com.cn"
 UPDATE_ENDPOINT = "/vgc/v2/getVgcAndPatch.do?"
 REDIR_ENDPOINT = "/pk/redirPost.do"
 
+# redirPost 拿不到直链时的回退前缀（拼上 pkName 即为下载地址）
+DOWNLOAD_BASE_URL = "https://sysupdxdl.vivo.com.cn/upgrade/oem/files/"
+
 
 # ============================================================
 # Dataclasses
@@ -647,6 +650,15 @@ def parse_update_response(response: str) -> UpdateInfo:
                     )
         except Exception as e:
             print(f"  [!] Failed to get redirect URL: {e}")
+
+    if (
+        not info.download_url
+        and info.filename
+        and info.filename != "(Not found)"
+    ):
+        # redirPost 未返回直链（服务端可能不再下发签名地址），按包名回退拼接
+        info.download_url = DOWNLOAD_BASE_URL + info.filename
+        print(f"  [!] redirPost 未返回直链，改为拼接: {info.download_url}")
 
     return info
 
