@@ -9,11 +9,13 @@
     "snp": "A0000000000000A",
     "is_full": "true"
   },
-  "checked_at": "2026-09-20T14:23:13+00:00",
+  "checked_at": "2026-09-20T16:24:57+00:00",
   "result": {
-    "status": "error",
+    "status": "no_update",
     "data": {
-      "reason": "请求失败: HTTPSConnectionPool(host='sysupgrade.vivo.com.cn', port=443): Max retries exceeded with url: /vgc/v2/getVgcAndPatch.do (Caused by ConnectTimeoutError(<HTTPSConnection(host='sysupgrade.vivo.com.cn', port=443) at 0x7f6979aacbd0>, 'Connection to sysupgrade.vivo.com.cn timed out. (connect timeout=10)'))"
+      "retcode": 210,
+      "message": "无更新",
+      "detail": "{\"message\":\"无更新\",\"retcode\":210}"
     }
   }
 }
