@@ -9,11 +9,53 @@
     "snp": "A0000000000000A",
     "is_full": "true"
   },
-  "checked_at": "2026-10-04T06:30:40+00:00",
+  "checked_at": "2026-10-04T15:33:09+00:00",
   "result": {
-    "status": "error",
+    "status": "success",
     "data": {
-      "reason": "请求失败: HTTPSConnectionPool(host='sysupgrade.vivo.com.cn', port=443): Max retries exceeded with url: /vgc/v2/getVgcAndPatch.do (Caused by ConnectTimeoutError(<HTTPSConnection(host='sysupgrade.vivo.com.cn', port=443) at 0x7f07247f5a90>, 'Connection to sysupgrade.vivo.com.cn timed out. (connect timeout=10)'))"
+      "retcode": 0,
+      "patch": {
+        "version": "16.1.12.38.W10.V000L1",
+        "pk": "https://sysupgrade.vivo.com.cn/pk/redir.do?name=%40a166096%3D%3D13oomKXYXNPFHYwNdMPFXY4JnNyDiYz6yN5FH0wDnMyJi0lMHNBhXNy1S0zhQNdJQNzjz3kwibnxTakxdK78&fileType=relative&fileLength=11742328153&packageType=patch",
+        "pkName": "20260829032850cd9b36d18a8352ed32b9f147c1da426c.zip",
+        "pkSha256": "80c8873ac8730b2d6288bd560e878b3910f6f637f9725f8edeeb688af08cf21f",
+        "pkLen": "11742328153",
+        "h5Zip": "https://sysdesc.vivo.com.cn/upgrade/h5/2026/09/202609072023420776778-2.zip",
+        "h5ZipSha256": "ea64abeed56cdae21db87281ec95911a3b9758aa8b5ac92d0969e609d413c281",
+        "h5Url": "https://sysdesc.vivo.com.cn/upgrade/h5/2026/09/202609072023420776778-2/index.html",
+        "logVer": 2,
+        "highLightFlag": 0,
+        "way": 1,
+        "crossVersion": "",
+        "osArdCross": "",
+        "otaType": "AB",
+        "osShowVer": "",
+        "osVer": "Funtouch 16.0",
+        "ardVer": "16",
+        "ggBug": 0,
+        "space": 0,
+        "checkString": ""
+      },
+      "ext": {
+        "isFull": 1,
+        "storage": 600,
+        "t1": 38,
+        "t2": 50,
+        "t3": 53,
+        "compilationTime": 20,
+        "smallVersionCompilationTime": 3,
+        "bigVersionCompilationTime": 5,
+        "bbklog": 0,
+        "nightUpgrade": 0,
+        "bindChargeDay": 0,
+        "space": 100,
+        "timeStamp": 1791127990535,
+        "osVer": "",
+        "apiLevel": "",
+        "ggBugDate": "2026-08-01",
+        "ggInviteSwitch": 3
+      },
+      "download_url": "https://sysupdxdl.vivo.com.cn/upgrade/oem/files/20260829032850cd9b36d18a8352ed32b9f147c1da426c.zip"
     }
   },
   "history": [
@@ -38,7 +80,7 @@
       "isFull": 1,
       "ggBugDate": "2026-08-01",
       "first_seen": "2026-09-10T22:44:40+08:00",
-      "last_seen": "2026-10-03T16:36:35+00:00",
+      "last_seen": "2026-10-04T15:33:09+00:00",
       "download_url": "https://sysupdxdl.vivo.com.cn/upgrade/oem/files/20260829032850cd9b36d18a8352ed32b9f147c1da426c.zip"
     }
   ]
